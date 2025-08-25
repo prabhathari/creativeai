@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI Chat Application</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .conversation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .conversation-item {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .conversation-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-height: calc(100vh - 300px);
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        }
+
+        .message-content {
+            flex: 1;
+            max-width: 70%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 18px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 18px 18px 4px 18px;
+        }
+
+        .message.assistant .message-content {
+            border-radius: 18px 18px 18px 4px;
+        }
+
+        .message-timestamp {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .chat-input-container {
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: white;
+            font-size: 1rem;
+            resize: none;
+            min-height: 24px;
+            max-height: 120px;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .send-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem 1.5rem;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        .loading-dot:nth-child(3) { animation-delay: 0; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 2rem;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .empty-state p {
+            opacity: 0.8;
+            max-width: 400px;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            color: #fca5a5;
+            margin: 1rem 0;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            color: #86efac;
+            margin: 1rem 0;
+        }
+
+        .clear-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #fca5a5;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:5000';
+
+        // Utility function for API calls
+        const apiCall = async (endpoint, options = {}) => {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                ...options,
+            });
+
+            if (!response.ok) {
+                throw new Error(`API call failed: ${response.status}`);
+            }
+
+            return response.json();
+        };
+
+        // Message Component
+        const Message = ({ message, isLast }) => {
+            const formatTimestamp = (timestamp) => {
+                return new Date(timestamp).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            };
+
+            return (
+                <div className={`message ${message.role}`}>
+                    <div className="message-avatar">
+                        {message.role === 'user' ? 'U' : 'AI'}
+                    </div>
+                    <div className="message-content">
+                        {message.content}
+                        <div className="message-timestamp">
+                            {formatTimestamp(message.timestamp)}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Loading Indicator Component
+        const LoadingIndicator = () => (
+            <div className="loading-indicator">
+                <div className="message-avatar" style={{background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)'}}>
+                    AI
+                </div>
+                <div style={{background: 'rgba(255, 255, 255, 0.1)', padding: '1rem 1.5rem', borderRadius: '18px 18px 18px 4px', border: '1px solid rgba(255, 255, 255, 0.2)'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                        <span>Thinking</span>
+                        <div className="loading-dots">
+                            <div className="loading-dot"></div>
+                            <div className="loading-dot"></div>
+                            <div className="loading-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // Main Chat Application Component
+        const ChatApp = () => {
+            const [messages, setMessages] = useState([]);
+            const [inputMessage, setInputMessage] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [success, setSuccess] = useState('');
+            const [conversationId, setConversationId] = useState('default');
+            const [conversations, setConversations] = useState(['default']);
+            const [backendStatus, setBackendStatus] = useState('checking');
+            
+            const messagesEndRef = useRef(null);
+            const inputRef = useRef(null);
+
+            // Check backend health
+            const checkBackendHealth = async () => {
+                try {
+                    await apiCall('/health');
+                    setBackendStatus('connected');
+                } catch (error) {
+                    setBackendStatus('disconnected');
+                }
+            };
+
+            // Load conversation
+            const loadConversation = async (convId) => {
+                try {
+                    const data = await apiCall(`/api/conversations/${convId}`);
+                    setMessages(data.messages || []);
+                    setConversationId(convId);
+                } catch (error) {
+                    setError('Failed to load conversation');
+                }
+            };
+
+            // Send message
+            const sendMessage = async () => {
+                if (!inputMessage.trim() || loading) return;
+
+                const userMessage = {
+                    role: 'user',
+                    content: inputMessage,
+                    timestamp: new Date().toISOString()
+                };
+
+                setMessages(prev => [...prev, userMessage]);
+                setInputMessage('');
+                setLoading(true);
+                setError('');
+
+                try {
+                    const data = await apiCall('/api/chat', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            message: inputMessage,
+                            conversation_id: conversationId,
+                            system_prompt: 'You are a helpful AI assistant. Provide clear, informative, and engaging responses.'
+                        }),
+                    });
+
+                    const aiMessage = {
+                        role: 'assistant',
+                        content: data.response,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    setMessages(prev => [...prev, aiMessage]);
+                    setSuccess('Message sent successfully!');
+                    setTimeout(() => setSuccess(''), 3000);
+                } catch (error) {
+                    setError(`Failed to send message: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Create new conversation
+            const createNewConversation = () => {
+                const newId = `chat_${Date.now()}`;
+                setConversations(prev => [...prev, newId]);
+                setConversationId(newId);
+                setMessages([]);
+            };
+
+            // Clear current conversation
+            const clearConversation = async () => {
+                try {
+                    await apiCall(`/api/conversations/${conversationId}`, {
+                        method: 'DELETE',
+                    });
+                    setMessages([]);
+                    setSuccess('Conversation cleared!');
+                    setTimeout(() => setSuccess(''), 3000);
+                } catch (error) {
+                    setError('Failed to clear conversation');
+                }
+            };
+
+            // Handle input key press
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            };
+
+            // Auto-scroll to bottom
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages]);
+
+            useEffect(() => {
+                checkBackendHealth();
+                const interval = setInterval(checkBackendHealth, 30000); // Check every 30 seconds
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="app">
+                    {/* Header */}
+                    <header className="header">
+                        <div className="logo">
+                            <div className="logo-icon">AI</div>
+                            <span>GenAI Chat</span>
+                        </div>
+                        <div className="header-controls">
+                            <div className="status-indicator">
+                                <div 
+                                    className="status-dot" 
+                                    style={{
+                                        background: backendStatus === 'connected' ? '#4ade80' : 
+                                                  backendStatus === 'disconnected' ? '#ef4444' : '#facc15'
+                                    }}
+                                ></div>
+                                <span>
+                                    {backendStatus === 'connected' ? 'Connected' : 
+                                     backendStatus === 'disconnected' ? 'Disconnected' : 'Checking...'}
+                                </span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="main-container">
+                        {/* Sidebar */}
+                        <div className="sidebar">
+                            <button className="new-chat-btn" onClick={createNewConversation}>
+                                ➕ New Chat
+                            </button>
+                            
+                            <h3>Conversations</h3>
+                            <div className="conversation-list">
+                                {conversations.map(convId => (
+                                    <div 
+                                        key={convId}
+                                        className={`conversation-item ${convId === conversationId ? 'active' : ''}`}
+                                        onClick={() => loadConversation(convId)}
+                                    >
+                                        {convId === 'default' ? 'Default Chat' : `Chat ${convId.split('_')[1]}`}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {messages.length > 0 && (
+                                <button className="clear-btn" onClick={clearConversation}>
+                                    🗑️ Clear Chat
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Chat Container */}
+                        <div className="chat-container">
+                            {/* Messages */}
+                            <div className="chat-messages">
+                                {messages.length === 0 ? (
+                                    <div className="empty-state">
+                                        <div className="empty-state-icon">💬</div>
+                                        <h3>Welcome to GenAI Chat</h3>
+                                        <p>Start a conversation with our AI assistant. Ask questions, get help, or just chat!</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {messages.map((message, index) => (
+                                            <Message 
+                                                key={index} 
+                                                message={message} 
+                                                isLast={index === messages.length - 1}
+                                            />
+                                        ))}
+                                        {loading && <LoadingIndicator />}
+                                        <div ref={messagesEndRef} />
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Status Messages */}
+                            {error && (
+                                <div className="error-message">
+                                    ❌ {error}
+                                    <button 
+                                        onClick={() => setError('')}
+                                        style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            )}
+
+                            {success && (
+                                <div className="success-message">
+                                    ✅ {success}
+                                </div>
+                            )}
+
+                            {/* Input */}
+                            <div className="chat-input-container">
+                                <div className="chat-input-wrapper">
+                                    <textarea
+                                        ref={inputRef}
+                                        className="chat-input"
+                                        value={inputMessage}
+                                        onChange={(e) => setInputMessage(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        placeholder="Type your message here... (Press Enter to send)"
+                                        rows="1"
+                                        disabled={loading || backendStatus !== 'connected'}
+                                    />
+                                    <button
+                                        className="send-button"
+                                        onClick={sendMessage}
+                                        disabled={!inputMessage.trim() || loading || backendStatus !== 'connected'}
+                                    >
+                                        {loading ? '⏳' : '🚀'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the application
+        ReactDOM.render(<ChatApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
